@@ -62,11 +62,23 @@ py -3.10 voir_accuracy.py
 
 ## Backend Integration
 
+The trained model files are available in GitHub Releases:
+
+```text
+https://github.com/balsem2/P2M-DAS-Intrusion-Detection/releases/tag/v1.0
+```
+
 Minimum files needed to use the CNN in a backend:
 
 ```text
-best_cnn_das_2d.keras
+best_cnn_das_2d_backend.keras
 classes_das_2d.npy
+```
+
+The full trained model is also available in the same release:
+
+```text
+best_cnn_das_2d.keras
 ```
 
 Expected model input shape:
