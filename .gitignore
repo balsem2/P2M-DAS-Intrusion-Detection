@@ -27,3 +27,4 @@ X_das.npy
 y_das.npy
 best_cnn_das_2d.keras
 best_cnn_das_2d_backend.keras
+CNNmodel.py

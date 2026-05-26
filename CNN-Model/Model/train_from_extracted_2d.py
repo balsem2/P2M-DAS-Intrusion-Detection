@@ -1,3 +1,5 @@
+from pathlib import Path
+
 import numpy as np
 import tensorflow as tf
 from sklearn.metrics import classification_report, confusion_matrix
@@ -16,12 +18,23 @@ LEARNING_RATE = 1e-4
 np.random.seed(RANDOM_SEED)
 tf.random.set_seed(RANDOM_SEED)
 
+ROOT = Path(__file__).resolve().parents[1]
+PROJECT_ROOT = ROOT.parent
+DATA_ROOT = ROOT / "Data_Preparation"
+TRAINED_ROOT = ROOT / "Trained_Model"
+RESULTS_ROOT = ROOT / "Results"
+
+x_path = DATA_ROOT / "X_das_2d.npy"
+y_path = DATA_ROOT / "y_das_2d.npy"
+if not x_path.exists():
+    x_path = PROJECT_ROOT / "X_das_2d.npy"
+if not y_path.exists():
+    y_path = PROJECT_ROOT / "y_das_2d.npy"
 
 
-
-X = np.load("X_das_2d.npy")
-y = np.load("y_das_2d.npy")
-classes = np.load("classes_das_2d.npy", allow_pickle=True)
+X = np.load(x_path)
+y = np.load(y_path)
+classes = np.load(TRAINED_ROOT / "classes_das_2d.npy", allow_pickle=True)
 
 print("[INFO] X shape:", X.shape)
 print("[INFO] y shape:", y.shape)
@@ -118,7 +131,7 @@ cbs = [
         verbose=1,
     ),
     callbacks.ModelCheckpoint(
-        "best_cnn_das_2d.keras",
+        TRAINED_ROOT / "best_cnn_das_2d.keras",
         monitor="val_accuracy",
         mode="max",
         save_best_only=True,
@@ -152,7 +165,18 @@ y_prob = model.predict(X_test, verbose=0)
 y_pred = np.argmax(y_prob, axis=1)
 
 print("\n=== Classification Report ===")
-print(classification_report(y_test, y_pred, target_names=classes, digits=4))
+report = classification_report(y_test, y_pred, target_names=classes, digits=4)
+print(report)
 
 print("\n=== Confusion Matrix ===")
-print(confusion_matrix(y_test, y_pred))
+matrix = confusion_matrix(y_test, y_pred)
+print(matrix)
+
+RESULTS_ROOT.mkdir(parents=True, exist_ok=True)
+with open(RESULTS_ROOT / "accuracy_result.txt", "w", encoding="utf-8") as f:
+    f.write(f"Test loss     : {test_loss:.4f}\n")
+    f.write(f"Test accuracy : {test_acc:.4f}\n\n")
+    f.write("Classification Report:\n")
+    f.write(report)
+    f.write("\nConfusion Matrix:\n")
+    f.write(str(matrix))

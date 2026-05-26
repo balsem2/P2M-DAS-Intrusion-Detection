@@ -12,7 +12,7 @@ Le projet combine trois blocs principaux :
 ## Structure du projet
 
 ```text
-CNN-Model/          Modèle CNN 2D, extraction FFT, évaluation et classes
+CNN-Model/          Modèle CNN 2D organisé en préparation, modèle, résultats et modèle entraîné
 LSTM-Model/         Préparation des données actives et modèle LSTM de prévision
 DAS_Interface/      Application web React de visualisation
 Data_Exploration/   Fichiers et scripts d'exploration du dataset
@@ -45,10 +45,10 @@ Test loss     : 0.1484
 Fichiers importants :
 
 ```text
-CNN-Model/extract_dataset_2d.py
-CNN-Model/train_from_extracted_2d.py
-CNN-Model/classes_das_2d.npy
-CNN-Model/accuracy_result.txt
+CNN-Model/Data_Preparation/extract_dataset_2d.py
+CNN-Model/Model/train_from_extracted_2d.py
+CNN-Model/Trained_Model/classes_das_2d.npy
+CNN-Model/Results/accuracy_result.txt
 ```
 
 ## LSTM : prévision temporelle
@@ -114,7 +114,7 @@ Pour l'intégration backend, utiliser :
 
 ```text
 best_cnn_das_2d_backend.keras
-CNN-Model/classes_das_2d.npy
+CNN-Model/Trained_Model/classes_das_2d.npy
 ```
 
 Le modèle complet est aussi disponible :

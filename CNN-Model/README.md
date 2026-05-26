@@ -1,92 +1,79 @@
-# P2M-DAS-Intrusion-Detection
+# CNN Model
 
-AI-based intrusion detection using Distributed Acoustic Sensing (DAS).
+Ce dossier contient la partie CNN du projet P2M pour la classification des événements DAS.
 
-This project uses a 2D CNN model to classify DAS signal events.
-
-## Objective
-
-- Load and preprocess DAS signals
-- Extract FFT-based 2D features
-- Classify events with a CNN model
-- Support backend integration for visualization applications
-
-## Classes
-
-- car
-- construction
-- fence
-- longboard
-- manipulation
-- openclose
-- regular
-- running
-- walk
-
-## Important Files
-
-- `best_cnn_das_2d.keras`: trained CNN model.
-- `classes_das_2d.npy`: model class names.
-- `extract_dataset_2d.py`: feature extraction from DAS files.
-- `train_from_extracted_2d.py`: CNN training script.
-- `voir_accuracy.py`: evaluates the saved model.
-- `open_model.py`: displays the model architecture.
-
-## Result
-
-Test accuracy:
+## Organisation
 
 ```text
-94.45%
+CNN-Model/
+├── Data_Preparation/
+│   └── extract_dataset_2d.py
+├── Model/
+│   ├── train_from_extracted_2d.py
+│   ├── voir_accuracy.py
+│   ├── open_model.py
+│   └── make_plots.py
+├── Trained_Model/
+│   ├── classes_das_2d.npy
+│   ├── best_cnn_das_2d.keras
+│   └── best_cnn_das_2d_backend.keras
+├── Results/
+│   ├── accuracy_result.txt
+│   └── model_summary.txt
+├── requirements.txt
+├── ouvrir_modele.bat
+└── voir_accuracy.bat
 ```
 
-## Usage
-
-Install dependencies:
-
-```powershell
-pip install -r requirements.txt
-```
-
-Display model summary:
-
-```powershell
-py -3.10 open_model.py
-```
-
-Evaluate model accuracy:
-
-```powershell
-py -3.10 voir_accuracy.py
-```
-
-## Backend Integration
-
-The trained model files are available in GitHub Releases:
+Les fichiers `.keras` sont disponibles dans GitHub Releases :
 
 ```text
 https://github.com/balsem2/P2M-DAS-Intrusion-Detection/releases/tag/v1.0
 ```
 
-Minimum files needed to use the CNN in a backend:
+## Classes
 
 ```text
-best_cnn_das_2d_backend.keras
-classes_das_2d.npy
+car, construction, fence, longboard, manipulation,
+openclose, regular, running, walk
 ```
 
-The full trained model is also available in the same release:
+## Résultat CNN
 
 ```text
-best_cnn_das_2d.keras
+Test accuracy : 94.45 %
+Test loss     : 0.1484
 ```
 
-Expected model input shape:
+## Utilisation
+
+Extraire les données :
+
+```powershell
+py -3.10 Data_Preparation\extract_dataset_2d.py
+```
+
+Entraîner le CNN :
+
+```powershell
+py -3.10 Model\train_from_extracted_2d.py
+```
+
+Voir l'architecture :
+
+```powershell
+py -3.10 Model\open_model.py
+```
+
+Voir l'accuracy :
+
+```powershell
+py -3.10 Model\voir_accuracy.py
+```
+
+Pour le backend, utiliser :
 
 ```text
-(1, 17, 1024, 1)
+Trained_Model/best_cnn_das_2d_backend.keras
+Trained_Model/classes_das_2d.npy
 ```
-
-## Dataset
-
-The raw dataset `data/` and large extracted arrays such as `X_das_2d.npy` are not included in this repository because of their size.

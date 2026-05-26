@@ -7,7 +7,10 @@ from sklearn.preprocessing import LabelEncoder
 
 
 
-DATASET_ROOT = Path(r"D:\DAS-dataset\DAS-dataset\data")
+ROOT = Path(__file__).resolve().parents[1]
+PROJECT_ROOT = ROOT.parent
+DATASET_ROOT = PROJECT_ROOT / "data"
+TRAINED_ROOT = ROOT / "Trained_Model"
 H5_KEY = "Acquisition/Raw[0]/RawData"
 
 CLASS_NAMES = [
@@ -190,9 +193,10 @@ def build_dataset_from_h5_and_npy(dataset_root: Path):
     print("[INFO] y shape:", y.shape)
     print("[INFO] Classes:", list(le.classes_))
 
-    np.save("X_das_2d.npy", X)
-    np.save("y_das_2d.npy", y)
-    np.save("classes_das_2d.npy", le.classes_)
+    TRAINED_ROOT.mkdir(parents=True, exist_ok=True)
+    np.save(ROOT / "Data_Preparation" / "X_das_2d.npy", X)
+    np.save(ROOT / "Data_Preparation" / "y_das_2d.npy", y)
+    np.save(TRAINED_ROOT / "classes_das_2d.npy", le.classes_)
 
     print("[INFO] Fichiers sauvegardés :")
     print(" - X_das_2d.npy")

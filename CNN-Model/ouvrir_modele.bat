@@ -1,4 +1,4 @@
 @echo off
-cd /d D:\DAS-dataset\DAS-dataset
-py -3.10 open_model.py
+cd /d "%~dp0"
+py -3.10 Model\open_model.py
 pause
