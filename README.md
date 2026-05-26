@@ -1,61 +1,143 @@
 # P2M-DAS-Intrusion-Detection
 
-AI-based intrusion detection using Distributed Acoustic Sensing (DAS).
+Projet P2M : système de détection, prévision et visualisation d'intrusions à partir de signaux DAS
+(*Distributed Acoustic Sensing*).
 
-This repository contains:
+Le projet combine trois blocs principaux :
 
-- `CNN-Model/`: 2D CNN model for DAS event classification.
-- `LSTM-Model/`: LSTM model files.
-- `DAS_Interface/`: visualization/backend interface.
-- `Data_Exploration/`: data exploration files.
+- un modèle **CNN 2D** pour classifier les événements DAS ;
+- un modèle **LSTM** pour prévoir l'évolution temporelle du signal ;
+- une **application web React** pour visualiser la fibre, les alertes et les courbes de signal.
 
-## CNN Model
-
-The CNN model classifies DAS events into:
-
-- car
-- construction
-- fence
-- longboard
-- manipulation
-- openclose
-- regular
-- running
-- walk
-
-Test accuracy:
+## Structure du projet
 
 ```text
-94.45%
+CNN-Model/          Modèle CNN 2D, extraction FFT, évaluation et classes
+LSTM-Model/         Préparation des données actives et modèle LSTM de prévision
+DAS_Interface/      Application web React de visualisation
+Data_Exploration/   Fichiers et scripts d'exploration du dataset
+Presentation/       Présentation PDF du projet
+rapport_technique.tex
 ```
 
-## Trained CNN Files
+## CNN : classification d'événements
 
-The trained Keras model files are available in GitHub Releases:
+Le CNN reçoit des patches de forme :
+
+```text
+(17, 1024, 1)
+```
+
+Il classe les événements parmi 9 classes :
+
+```text
+car, construction, fence, longboard, manipulation,
+openclose, regular, running, walk
+```
+
+Résultat obtenu sur le test set :
+
+```text
+Test accuracy : 94.45 %
+Test loss     : 0.1484
+```
+
+Fichiers importants :
+
+```text
+CNN-Model/extract_dataset_2d.py
+CNN-Model/train_from_extracted_2d.py
+CNN-Model/classes_das_2d.npy
+CNN-Model/accuracy_result.txt
+```
+
+## LSTM : prévision temporelle
+
+Le modèle LSTM prédit l'évolution future du signal DAS. Il utilise :
+
+```text
+Entrée : 8192 points sur 8 canaux
+Sortie : 1024 points futurs sur 8 canaux
+```
+
+Le modèle sauvegardé est :
+
+```text
+LSTM-Model/Trained_Model/best_lstm_forecast.keras
+```
+
+## Application web
+
+L'interface se trouve dans :
+
+```text
+DAS_Interface/das-monitor/
+```
+
+Elle permet de visualiser :
+
+- une page d'authentification ;
+- une carte de la fibre avec 166 segments ;
+- les alertes par couleur : normal, alerte, danger ;
+- l'événement prédit par le CNN ;
+- les courbes de signal actuel et de prédiction LSTM.
+
+Pour lancer l'application :
+
+```powershell
+cd DAS_Interface/das-monitor
+npm install
+npm start
+```
+
+URL locale :
+
+```text
+http://localhost:3000
+```
+
+Sur Windows, le fichier suivant peut aussi être utilisé :
+
+```text
+DAS_Interface/das-monitor/ouvrir_application.bat
+```
+
+## Modèles entraînés CNN
+
+Les modèles CNN entraînés sont disponibles dans la release GitHub :
 
 ```text
 https://github.com/balsem2/P2M-DAS-Intrusion-Detection/releases/tag/v1.0
 ```
 
-For backend integration, use:
+Pour l'intégration backend, utiliser :
 
 ```text
 best_cnn_das_2d_backend.keras
 CNN-Model/classes_das_2d.npy
 ```
 
-The full trained model is also available:
+Le modèle complet est aussi disponible :
 
 ```text
 best_cnn_das_2d.keras
 ```
 
-Expected CNN input shape:
+## Présentation et rapport
+
+Présentation du projet :
 
 ```text
-(1, 17, 1024, 1)
+Presentation/DAS_System_VF.pdf
+```
+
+Rapport technique LaTeX :
+
+```text
+rapport_technique.tex
 ```
 
 ## Notes
 
-The raw DAS dataset and large extracted arrays are not included in the repository because of their size.
+Le dataset brut `data/` et les gros tableaux extraits comme `X_das_2d.npy` ne sont pas inclus dans GitHub
+à cause de leur taille.

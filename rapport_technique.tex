@@ -1,0 +1,393 @@
+\documentclass[10pt,a4paper]{article}
+
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage[french]{babel}
+\usepackage{geometry}
+\usepackage{booktabs}
+\usepackage{array}
+\usepackage{amsmath}
+\usepackage{xcolor}
+\usepackage{hyperref}
+\usepackage{caption}
+\usepackage{float}
+\usepackage{enumitem}
+\usepackage{titlesec}
+
+\geometry{margin=2cm}
+\setlength{\parskip}{4pt}
+\setlength{\parindent}{0pt}
+\setlist{itemsep=2pt, topsep=3pt}
+\titlespacing*{\section}{0pt}{10pt}{6pt}
+\titlespacing*{\subsection}{0pt}{8pt}{4pt}
+\hypersetup{
+    colorlinks=true,
+    linkcolor=blue,
+    urlcolor=blue
+}
+
+\title{\textbf{Projet P2M : Détection et visualisation d'intrusions par signaux DAS à l'aide de modèles CNN et LSTM}}
+\author{Balsem Zouabi \\ Louay Ayadi}
+\date{\today}
+
+\begin{document}
+
+\maketitle
+
+\begin{abstract}
+Ce rapport présente le projet P2M, une solution complète de détection, de prévision et de visualisation d'événements
+acoustiques à partir de signaux DAS (\textit{Distributed Acoustic Sensing}). L'objectif est d'identifier
+automatiquement différents types d'activités autour d'une fibre optique, comme la marche, la course, le
+passage d'une voiture ou une manipulation de clôture. La solution proposée combine un modèle CNN 2D pour
+la classification des événements, un modèle LSTM pour la prévision temporelle du signal, et une application
+web de visualisation destinée au suivi des segments de la fibre. Le CNN atteint une précision globale de
+94,45 \% sur l'ensemble de test.
+\end{abstract}
+
+\tableofcontents
+\newpage
+
+\section{Présentation de la problématique}
+
+Les systèmes DAS permettent de transformer une fibre optique en capteur distribué capable de mesurer des
+vibrations le long de son parcours. Cette technologie est intéressante pour la surveillance périmétrique,
+la protection d'infrastructures et la détection d'intrusions. Chaque événement produit une signature
+spatio-temporelle particulière dans le signal mesuré par la fibre.
+
+La problématique traitée dans ce projet consiste à classifier automatiquement un événement DAS parmi
+plusieurs classes, à anticiper l'évolution du signal sur un court horizon temporel et à présenter ces
+informations dans une interface lisible pour l'utilisateur. Le système doit distinguer des activités normales
+ou environnementales de situations potentiellement liées à une intrusion. Les classes considérées par le
+module CNN sont les suivantes :
+
+\begin{center}
+\begin{tabular}{lll}
+\toprule
+\textbf{Classe} & \textbf{Description} & \textbf{Type d'événement} \\
+\midrule
+car & Passage de voiture & Mobilité \\
+construction & Activité de construction & Bruit environnemental \\
+fence & Interaction avec une clôture & Intrusion potentielle \\
+longboard & Passage en longboard & Mobilité \\
+manipulation & Manipulation proche de la fibre & Intrusion potentielle \\
+openclose & Ouverture/fermeture & Action mécanique \\
+regular & Signal régulier ou normal & État non critique \\
+running & Course & Mobilité humaine \\
+walk & Marche & Mobilité humaine \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+Le défi principal vient de la nature des signaux DAS : ils sont volumineux, bruités et fortement dépendants
+du temps et de la position spatiale le long de la fibre. Une méthode efficace doit donc capturer à la fois
+l'information fréquentielle du signal, sa localisation spatiale et son évolution temporelle.
+
+\section{Description de la solution proposée}
+
+\subsection{Architecture globale du projet}
+
+La solution finale est organisée en trois modules complémentaires :
+
+\begin{center}
+\begin{tabular}{lll}
+\toprule
+\textbf{Module} & \textbf{Rôle} & \textbf{Fichiers principaux} \\
+\midrule
+CNN 2D & Classification des événements DAS & \texttt{CNN-Model/} \\
+LSTM & Prévision temporelle du signal futur & \texttt{LSTM-Model/} \\
+Application web & Visualisation des alertes et des courbes & \texttt{DAS\_Interface/das-monitor/} \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+Le CNN fournit la classe probable de l'événement détecté. Le LSTM complète cette information par une
+prévision de l'évolution du signal, utile pour visualiser la tendance future. L'application web regroupe
+ces sorties dans une interface de supervision composée d'une carte de la fibre et de courbes de suivi.
+
+\subsection{Prétraitement des données pour le CNN}
+
+Les données brutes sont stockées sous forme de fichiers HDF5. Pour construire l'ensemble d'apprentissage,
+le signal est découpé en fenêtres temporelles. Chaque fenêtre est ensuite transformée en représentation
+fréquentielle afin de mieux caractériser les vibrations associées aux événements.
+
+Le pipeline d'extraction utilise les paramètres suivants :
+
+\begin{center}
+\begin{tabular}{ll}
+\toprule
+\textbf{Paramètre} & \textbf{Valeur} \\
+\midrule
+Taille de fenêtre temporelle & 8192 échantillons \\
+Décalage entre fenêtres & 2048 échantillons \\
+Sur-échantillonnage FFT & 3 \\
+Nombre de coefficients FFT conservés & 1024 \\
+Nombre de canaux spatiaux par patch & 17 \\
+Forme finale d'un échantillon & $(17, 1024, 1)$ \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+Pour chaque canal central sélectionné, un patch 2D est construit avec 17 canaux voisins. Chaque ligne du
+patch correspond à un canal spatial, et chaque colonne correspond à une composante fréquentielle. La
+transformation appliquée à chaque signal 1D est :
+
+\begin{enumerate}
+    \item centrage du signal par soustraction de la moyenne ;
+    \item application d'une fenêtre de Hann ;
+    \item calcul de la FFT réelle ;
+    \item extraction de la magnitude ;
+    \item transformation logarithmique $\log(1+x)$ ;
+    \item normalisation par z-score.
+\end{enumerate}
+
+Cette représentation permet au CNN de traiter le signal comme une image temps-fréquence/spatio-fréquence.
+
+\subsection{Architecture du modèle CNN}
+
+Le modèle utilisé est un réseau de neurones convolutif 2D. Il reçoit en entrée un patch de forme
+$(17, 1024, 1)$ et produit une probabilité pour chacune des 9 classes. L'architecture est composée de
+quatre blocs convolutifs suivis de couches pleinement connectées.
+
+\begin{center}
+\begin{tabular}{lll}
+\toprule
+\textbf{Bloc} & \textbf{Couches principales} & \textbf{Sortie} \\
+\midrule
+1 & Conv2D 32 filtres $(3,7)$ + BatchNorm + MaxPooling & $(8,512,32)$ \\
+2 & Conv2D 64 filtres $(3,5)$ + BatchNorm + MaxPooling & $(4,256,64)$ \\
+3 & Conv2D 128 filtres $(3,3)$ + BatchNorm + MaxPooling & $(2,128,128)$ \\
+4 & Conv2D 256 filtres $(3,3)$ + BatchNorm + MaxPooling & $(1,64,256)$ \\
+Classification & Flatten + Dense 256 + Dropout + Dense 9 & 9 classes \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+Le modèle contient 13 795 997 paramètres au total. Parmi eux, 4 598 345 sont entraînables. La fonction de
+perte utilisée est l'entropie croisée catégorielle sparse :
+
+\[
+\mathcal{L} = - \sum_{i=1}^{N} \log(p_{i,y_i})
+\]
+
+où $p_{i,y_i}$ représente la probabilité prédite pour la vraie classe de l'échantillon $i$.
+L'optimiseur utilisé est Adam avec un taux d'apprentissage de $10^{-4}$.
+
+\subsection{Organisation de l'entraînement}
+
+L'ensemble extrait contient 13 506 échantillons. Il est divisé en trois parties :
+
+\begin{center}
+\begin{tabular}{lll}
+\toprule
+\textbf{Sous-ensemble} & \textbf{Nombre d'échantillons} & \textbf{Rôle} \\
+\midrule
+Train & 10 804 & Apprentissage des paramètres \\
+Validation & 1 351 & Suivi pendant l'entraînement \\
+Test & 1 351 & Évaluation finale \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+Des poids de classes sont utilisés pendant l'entraînement afin de réduire l'effet du déséquilibre potentiel
+entre les classes. Le meilleur modèle est sauvegardé sous forme de fichier Keras. Une version plus légère
+du modèle, sans l'état de l'optimiseur, est aussi fournie pour l'intégration backend.
+
+\subsection{Module LSTM pour la prévision temporelle}
+
+En complément du CNN, un modèle LSTM a été développé pour prédire l'évolution future du signal DAS. Son rôle
+n'est pas de classifier l'événement, mais d'estimer la dynamique temporelle du signal sur un horizon court.
+Ce module est utile pour l'interface de visualisation, car il permet d'afficher simultanément le signal actuel
+et une prédiction de tendance.
+
+Le prétraitement LSTM commence par l'extraction des canaux actifs à partir des fichiers de description
+\texttt{.txt}. Le script de préparation copie ensuite les canaux utiles depuis le fichier HDF5 original vers
+un nouveau fichier filtré. Cette étape réduit la taille des données et concentre l'apprentissage sur les zones
+actives de la fibre.
+
+\begin{center}
+\begin{tabular}{ll}
+\toprule
+\textbf{Paramètre LSTM} & \textbf{Valeur} \\
+\midrule
+Longueur de séquence d'entrée & 8192 points \\
+Horizon de prédiction & 1024 points \\
+Nombre de canaux conservés & 8 \\
+Stride & 2048 points \\
+Batch size & 32 \\
+Nombre maximal d'époques & 15 \\
+Modèle sauvegardé & \texttt{best\_lstm\_forecast.keras} \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+L'entrée du LSTM est donc de forme $(8192, 8)$ et la sortie attendue est de forme $(1024, 8)$. La cible
+utilisée n'est pas directement le signal brut, mais une enveloppe lissée du signal futur. Cette enveloppe
+est obtenue à partir de la valeur absolue du signal suivie d'une moyenne mobile. Ce choix rend la prédiction
+plus stable, car l'intensité acoustique est généralement plus prévisible que les oscillations instantanées
+du signal brut.
+
+L'architecture combine des couches \texttt{Conv1D}, des normalisations, du \texttt{Dropout}, puis une couche
+\texttt{Bidirectional LSTM}. Les convolutions réduisent progressivement la taille temporelle et extraient des
+motifs locaux, tandis que le LSTM bidirectionnel capture la dépendance temporelle globale dans la séquence.
+La sortie finale est produite par une convolution linéaire qui prédit les 8 canaux futurs.
+
+\subsection{Application web de visualisation}
+
+Une application web a également été ajoutée pour présenter les résultats de manière exploitable. Elle est
+développée avec React, \texttt{Recharts} pour les courbes et \texttt{lucide-react} pour les icônes. Elle se
+trouve dans le dossier \texttt{DAS\_Interface/das-monitor/}.
+
+L'interface est organisée en trois vues principales :
+
+\begin{itemize}
+    \item une vue d'authentification ;
+    \item une carte de la fibre DAS avec 166 points correspondant à des segments d'environ 10 mètres ;
+    \item une vue détaillée d'un segment, affichant l'état de criticité, l'événement CNN et les courbes LSTM.
+\end{itemize}
+
+Dans la carte, les segments sont représentés par des points colorés : vert pour un état normal, orange pour
+une alerte et rouge pour un danger. Lorsqu'un segment est sélectionné, l'application affiche l'événement
+probable classifié par le CNN et dix diagrammes correspondant à dix sous-sections d'un mètre. Chaque diagramme
+compare le signal actuel avec la prédiction temporelle fournie par le LSTM.
+
+Cette interface transforme les sorties des modèles en informations lisibles pour un opérateur : localisation
+sur la fibre, niveau de danger et évolution du signal.
+
+\section{Analyse des résultats obtenus}
+
+\subsection{Résultats globaux}
+
+Les performances finales sur l'ensemble de test sont les suivantes :
+
+\begin{center}
+\begin{tabular}{ll}
+\toprule
+\textbf{Métrique} & \textbf{Valeur} \\
+\midrule
+Loss test & 0,1484 \\
+Accuracy test & 0,9445 \\
+Accuracy test en pourcentage & 94,45 \% \\
+Macro F1-score & 0,9445 \\
+Weighted F1-score & 0,9445 \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+Ces résultats montrent que le modèle apprend correctement les signatures des différentes classes. Une
+précision de 94,45 \% est élevée pour une tâche multi-classes à 9 catégories, surtout avec des signaux
+physiques bruités.
+
+\subsection{Résultats par classe}
+
+\begin{center}
+\begin{tabular}{lcccc}
+\toprule
+\textbf{Classe} & \textbf{Précision} & \textbf{Rappel} & \textbf{F1-score} & \textbf{Support} \\
+\midrule
+car & 0,9800 & 0,9735 & 0,9767 & 151 \\
+construction & 0,9671 & 0,9800 & 0,9735 & 150 \\
+fence & 0,9478 & 0,8467 & 0,8944 & 150 \\
+longboard & 0,9730 & 0,9600 & 0,9664 & 150 \\
+manipulation & 0,9732 & 0,9667 & 0,9699 & 150 \\
+openclose & 0,9583 & 0,9200 & 0,9388 & 150 \\
+regular & 0,8631 & 0,9667 & 0,9119 & 150 \\
+running & 0,8944 & 0,9600 & 0,9260 & 150 \\
+walk & 0,9586 & 0,9267 & 0,9424 & 150 \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+Les classes \textit{car}, \textit{construction}, \textit{manipulation} et \textit{longboard} présentent les
+meilleurs scores F1, tous supérieurs à 0,96. Cela indique que leurs signatures fréquentielles et spatiales
+sont bien séparées par le modèle.
+
+La classe \textit{fence} présente le F1-score le plus faible, avec 0,8944. Son rappel est de 0,8467, ce qui
+signifie qu'une partie des événements \textit{fence} est confondue avec d'autres classes. D'après la matrice
+de confusion, l'erreur principale concerne la confusion entre \textit{fence} et \textit{regular}. Cette
+confusion peut s'expliquer par des signatures de vibration proches lorsque l'interaction avec la clôture est
+faible ou lorsque le bruit de fond est important.
+
+\subsection{Matrice de confusion}
+
+La matrice de confusion obtenue sur l'ensemble de test est la suivante. Les lignes représentent les vraies
+classes et les colonnes les classes prédites.
+
+\[
+\begin{bmatrix}
+147 & 1 & 0 & 0 & 0 & 1 & 0 & 2 & 0 \\
+0 & 147 & 0 & 1 & 0 & 0 & 0 & 2 & 0 \\
+0 & 0 & 127 & 0 & 1 & 0 & 20 & 1 & 1 \\
+0 & 1 & 0 & 144 & 0 & 1 & 0 & 4 & 0 \\
+1 & 0 & 0 & 0 & 145 & 4 & 0 & 0 & 0 \\
+0 & 0 & 2 & 1 & 1 & 138 & 2 & 4 & 2 \\
+0 & 0 & 5 & 0 & 0 & 0 & 145 & 0 & 0 \\
+1 & 0 & 0 & 2 & 0 & 0 & 0 & 144 & 3 \\
+1 & 3 & 0 & 0 & 2 & 0 & 1 & 4 & 139
+\end{bmatrix}
+\]
+
+L'analyse de cette matrice confirme que la majorité des prédictions se situe sur la diagonale, ce qui
+correspond aux classifications correctes. L'erreur la plus marquée est la prédiction de 20 échantillons
+\textit{fence} comme \textit{regular}. Les autres confusions restent faibles et dispersées.
+
+\subsection{Discussion}
+
+Les résultats obtenus montrent que l'approche CNN 2D est adaptée à la classification des signaux DAS. Le
+choix d'une représentation fréquentielle permet de transformer les signaux bruts en motifs plus facilement
+exploitables par des convolutions. L'utilisation de plusieurs canaux spatiaux autour d'un canal central
+permet également de tenir compte de la propagation locale des vibrations le long de la fibre.
+
+Cependant, certaines limites restent présentes. La confusion entre \textit{fence} et \textit{regular}
+montre que le modèle peut avoir des difficultés lorsque l'événement est proche du bruit de fond ou lorsque
+son intensité est faible. De plus, l'évaluation dépend de la qualité des annotations et de la représentativité
+des fichiers utilisés pour construire le dataset.
+
+\subsection{Analyse du module LSTM et de l'application}
+
+Le module LSTM apporte une information différente de celle du CNN. Alors que le CNN répond à la question
+``quel type d'événement est observé ?'', le LSTM répond à la question ``comment le signal risque-t-il
+d'évoluer dans les prochains instants ?''. Cette complémentarité est importante pour une application de
+supervision : la classification donne le type d'alerte, tandis que la prévision aide à suivre la dynamique du
+signal.
+
+Le modèle LSTM sauvegardé dans \texttt{LSTM-Model/Trained\_Model/best\_lstm\_forecast.keras} montre que le
+module de prévision a été entraîné et exporté. Le code prévoit une évaluation par MAE et MSE globales, mais
+les valeurs numériques finales de ces métriques ne sont pas présentes dans les fichiers de résultats fournis.
+Dans le rapport, l'analyse quantitative détaillée est donc centrée sur le CNN, pour lequel le rapport de
+classification et la matrice de confusion sont disponibles.
+
+L'application web constitue la partie de valorisation du projet. Elle permet de visualiser les alertes sur
+une topologie de fibre composée de 166 segments, puis d'ouvrir une vue détaillée par segment. Cette vue
+combine trois informations : le niveau de criticité, l'événement probable issu du CNN et les courbes de
+signal réel/prédit associées au LSTM. Le résultat attendu est une interface exploitable par un utilisateur
+non spécialiste du modèle, qui peut localiser rapidement une zone critique et consulter l'évolution du
+signal.
+
+\section{Conclusion}
+
+Ce projet a permis de développer une solution complète de traitement de signaux DAS. Le pipeline proposé
+combine une extraction de caractéristiques par FFT, un CNN 2D capable de reconnaître 9 classes d'événements,
+un LSTM pour la prévision temporelle du signal et une application web de visualisation. Les résultats CNN
+montrent une accuracy de 94,45 \% sur l'ensemble de test, ce qui confirme la pertinence de l'approche de
+classification.
+
+Pour améliorer le système, plusieurs pistes peuvent être envisagées : enrichir le dataset avec davantage
+d'exemples de classes difficiles, appliquer de l'augmentation de données contrôlée, documenter les métriques
+finales du LSTM, connecter l'application web à un backend réel, et tester des architectures plus compactes
+pour le déploiement.
+
+\section*{Fichiers livrés}
+
+\begin{itemize}
+    \item \texttt{CNN-Model/extract\_dataset\_2d.py} : extraction des caractéristiques.
+    \item \texttt{CNN-Model/train\_from\_extracted\_2d.py} : entraînement du CNN.
+    \item \texttt{CNN-Model/classes\_das\_2d.npy} : noms des classes.
+    \item \texttt{best\_cnn\_das\_2d.keras} : modèle complet.
+    \item \texttt{best\_cnn\_das\_2d\_backend.keras} : modèle léger pour l'inférence backend.
+    \item \texttt{LSTM-Model/Dta\_Preparation/Data\_Preparation.py} : préparation des canaux actifs.
+    \item \texttt{LSTM-Model/Model/LSTM.py} : entraînement du modèle de prévision.
+    \item \texttt{LSTM-Model/Trained\_Model/best\_lstm\_forecast.keras} : modèle LSTM sauvegardé.
+    \item \texttt{DAS\_Interface/das-monitor/} : application web React de visualisation.
+\end{itemize}
+
+\end{document}

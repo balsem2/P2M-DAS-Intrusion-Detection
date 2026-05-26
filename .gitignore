@@ -17,6 +17,7 @@ ENV/
 
 .DS_Store
 Thumbs.db
+*.log
 
 data/
 *.h5
