@@ -1,13 +1,26 @@
 __pycache__/
-*.pyc
-
-data/
-X_das_2d.npy
-y_das_2d.npy
+*.py[codz]
+*$py.class
 
 .venv/
 venv/
 env/
+ENV/
+
+.env
+.envrc
+
+.ipynb_checkpoints/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
 
 .DS_Store
 Thumbs.db
+
+data/
+*.h5
+X_das_2d.npy
+y_das_2d.npy
+X_das.npy
+y_das.npy

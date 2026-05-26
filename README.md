@@ -1,6 +1,15 @@
-# DAS CNN Classification
+# P2M-DAS-Intrusion-Detection
 
-Projet de classification de signaux DAS avec un modèle CNN 2D.
+AI-based intrusion detection using Distributed Acoustic Sensing (DAS).
+
+This project uses a 2D CNN model to classify DAS signal events.
+
+## Objective
+
+- Load and preprocess DAS signals
+- Extract FFT-based 2D features
+- Classify events with a CNN model
+- Support backend integration for visualization applications
 
 ## Classes
 
@@ -14,50 +23,58 @@ Projet de classification de signaux DAS avec un modèle CNN 2D.
 - running
 - walk
 
-## Fichiers importants
+## Important Files
 
-- `best_cnn_das_2d.keras` : modèle CNN entraîné.
-- `classes_das_2d.npy` : noms des classes du modèle.
-- `extract_dataset_2d.py` : extraction des features depuis les fichiers DAS.
-- `train_from_extracted_2d.py` : entraînement du CNN.
-- `voir_accuracy.py` : évaluation du modèle sauvegardé.
-- `open_model.py` : affichage de l'architecture du modèle.
+- `best_cnn_das_2d.keras`: trained CNN model.
+- `classes_das_2d.npy`: model class names.
+- `extract_dataset_2d.py`: feature extraction from DAS files.
+- `train_from_extracted_2d.py`: CNN training script.
+- `voir_accuracy.py`: evaluates the saved model.
+- `open_model.py`: displays the model architecture.
 
-## Résultat
+## Result
 
-Accuracy test :
+Test accuracy:
 
 ```text
 94.45%
 ```
 
-## Utilisation
+## Usage
 
-Installer les dépendances :
+Install dependencies:
 
 ```powershell
 pip install -r requirements.txt
 ```
 
-Afficher le résumé du modèle :
+Display model summary:
 
 ```powershell
 py -3.10 open_model.py
 ```
 
-Afficher l'accuracy :
+Evaluate model accuracy:
 
 ```powershell
 py -3.10 voir_accuracy.py
 ```
 
-## Note sur les données
+## Backend Integration
 
-Le dataset brut `data/` et le fichier `X_das_2d.npy` ne sont pas inclus dans GitHub car ils sont volumineux.
-
-Pour utiliser directement le modèle dans un backend, les fichiers minimum sont :
+Minimum files needed to use the CNN in a backend:
 
 ```text
 best_cnn_das_2d.keras
 classes_das_2d.npy
 ```
+
+Expected model input shape:
+
+```text
+(1, 17, 1024, 1)
+```
+
+## Dataset
+
+The raw dataset `data/` and large extracted arrays such as `X_das_2d.npy` are not included in this repository because of their size.
