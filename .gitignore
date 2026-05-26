@@ -1,0 +1,13 @@
+__pycache__/
+*.pyc
+
+data/
+X_das_2d.npy
+y_das_2d.npy
+
+.venv/
+venv/
+env/
+
+.DS_Store
+Thumbs.db
