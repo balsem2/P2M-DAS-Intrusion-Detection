@@ -24,3 +24,4 @@ X_das_2d.npy
 y_das_2d.npy
 X_das.npy
 y_das.npy
+best_cnn_das_2d.keras
